@@ -23,3 +23,7 @@ export const User = createParamDecorator(
     return request.user;
   },
 );
+
+// Config decorator ignore admin role
+export const ROLES_KEY = 'roles';
+export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);

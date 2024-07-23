@@ -8,16 +8,15 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './schemas/user.schema';
-import mongoose, { Model } from 'mongoose';
 import { genSaltSync, hashSync, compareSync } from 'bcryptjs';
-import { SoftDeleteModel } from 'soft-delete-plugin-mongoose/dist/soft-delete-model';
 import { IUser } from './users.interface';
 import aqp from 'api-query-params';
+import { Model } from 'mongoose';
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name)
-    private UserModel: SoftDeleteModel<UserDocument>,
+    private userModel: Model<UserDocument>,
   ) {}
 
   hashPassword = (password: string) => {
@@ -28,7 +27,7 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto) {
     try {
-      const isExitEmail = await this.UserModel.findOne({
+      const isExitEmail = await this.userModel.findOne({
         email: createUserDto.email,
       });
 
@@ -37,7 +36,7 @@ export class UsersService {
           `Email: ${createUserDto.email} đã tồn tại trên hệ thống`,
         );
       }
-      const newUser = new this.UserModel({
+      const newUser = new this.userModel({
         name: createUserDto.name,
         email: createUserDto.email,
         password: await this.hashPassword(createUserDto.password),
@@ -58,9 +57,10 @@ export class UsersService {
     delete filter.pageSize;
     let offset = (+current - 1) * +pageSize;
     let defaultLimit = +pageSize ? +pageSize : 10;
-    const totalItems = (await this.UserModel.find(filter)).length;
+    const totalItems = (await this.userModel.find(filter)).length;
     const totalPages = Math.ceil(totalItems / defaultLimit);
-    const result = await this.UserModel.find(filter)
+    const result = await this.userModel
+      .find(filter)
       .skip(offset)
       .limit(defaultLimit)
       // @ts-ignore: Unreachable code error
@@ -81,21 +81,21 @@ export class UsersService {
 
   async findOne(email: string): Promise<User | null> {
     try {
-      const user = await this.UserModel.findOne({ email }).exec();
-      if (!user) {
+      const user = await this.userModel.findOne({ email }).exec();
+      if (!user)
         throw new NotFoundException(`User with email ${email} not found`);
-      }
       return user;
     } catch (error) {
+      console.error(`Failed to find user: ${error.message}`);
       throw new Error(`Failed to find user: ${error.message}`);
     }
   }
-  
+
   async findOneByEmail(email: string) {
     try {
       if (email === null || email === '' || email === undefined)
         return 'Không được để trống email người dùng!';
-      const user = await this.UserModel.findOne({ email: email }).populate({
+      const user = await this.userModel.findOne({ email: email }).populate({
         path: 'role',
         select: { name: 1 },
       });
@@ -111,7 +111,7 @@ export class UsersService {
   }
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
-      const userUpdate = await this.UserModel.findOneAndUpdate(
+      const userUpdate = await this.userModel.findOneAndUpdate(
         { _id: id },
         updateUserDto,
       );
@@ -125,20 +125,20 @@ export class UsersService {
     }
   }
 
-  async remove(id: string, user: IUser) {
-    this.UserModel.softDelete({ _id: id });
-    const result = await this.UserModel.findByIdAndUpdate({
-      _id: id,
-      deletedBy: {
-        _id: user._id,
-        email: user.email,
-      },
-    });
-    return result;
-  }
+  // async remove(id: string, user: IUser) {
+  //   this.userModel.softDelete({ _id: id });
+  //   const result = await this.userModel.findByIdAndUpdate({
+  //     _id: id,
+  //     deletedBy: {
+  //       _id: user._id,
+  //       email: user.email,
+  //     },
+  //   });
+  //   return result;
+  // }
 
   async updateUserToken(refresh_token: string, _id: string) {
-    return this.UserModel.updateOne(
+    return this.userModel.updateOne(
       { _id },
       {
         refresh_token: refresh_token,
@@ -147,6 +147,6 @@ export class UsersService {
   }
 
   async findOneByRefreshToken(refresh_token: string) {
-    return this.UserModel.findOne({ refresh_token: refresh_token });
+    return this.userModel.findOne({ refresh_token: refresh_token });
   }
 }

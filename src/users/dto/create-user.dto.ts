@@ -4,21 +4,26 @@ import { Role } from 'src/constants/enums/role.enum';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'Name Không được để trống!' })
+  @ApiProperty({ example: 'ajanuw', description: 'user name' })
   name: string;
 
   @IsString({ message: 'Phải là 1 chuỗi ký tự!' })
   @IsNotEmpty({ message: 'Không được để trống!' })
   @IsEmail({}, { message: 'Không đúng định dạng email!' })
+  @ApiProperty({ example: 'ajanuw', description: 'Email' })
   email: string;
 
   @IsNotEmpty()
+  @ApiProperty({ example: 'ajanuw', description: 'Password' })
   password: string;
 
   @IsNotEmpty({ message: 'Age Không được để trống!' })
+  @ApiProperty({ example: 'ajanuw', description: 'Age' })
   age: number;
 
   @IsNotEmpty({ message: 'Role Không được để trống!' })
-  @IsEnum(Role, { message: 'Role phải là một trong các giá trị hợp lệ' }) // Sử dụng @IsEnum cho enum
+  @IsEnum(Role, { message: 'Role phải là một trong các giá trị hợp lệ' })
+  @ApiProperty({ example: 'ajanuw', description: 'Role' })
   role: Role;
 }
 

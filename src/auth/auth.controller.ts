@@ -1,9 +1,7 @@
 import { Controller, Get, Post, UseGuards, Body, Req } from '@nestjs/common';
-import { AppService } from 'src/app.service';
-import { LocalAuthGuard } from './local-auth.guard';
+import { LocalAuthGuard } from '../guards/local-auth.guard';
 import { RegisterUserDto, UserLoginDto } from 'src/users/dto/create-user.dto';
 import { AuthService } from './auth.service';
-import { IUser } from 'src/users/users.interface';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage, User } from 'src/decorators/customize';
 

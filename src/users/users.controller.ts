@@ -5,14 +5,12 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Public, ResponseMessage, User } from 'src/decorators/customize';
-import { IUser } from './users.interface';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('users')
@@ -22,13 +20,10 @@ export class UsersController {
   @Public()
   @Post()
   @ResponseMessage('Create a new User')
-  create(@Body() createUserDto: CreateUserDto) {
-    try {
-      return this.usersService.create(createUserDto);
-    } catch (error) {
-      console.log(error);
-    }
+  async create(@Body() createUserDto: CreateUserDto) {
+    return await this.usersService.create(createUserDto);
   }
+
   @Public()
   @Get()
   findAll(
@@ -50,9 +45,9 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Delete(':id')
-  @ResponseMessage('Remove a User')
-  remove(@Param('id') id: string, @User() user: IUser) {
-    return this.usersService.remove(id, user);
-  }
+  // @Delete(':id')
+  // @ResponseMessage('Remove a User')
+  // remove(@Param('id') id: string, @User() user: IUser) {
+  //   return this.usersService.remove(id, user);
+  // }
 }

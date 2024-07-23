@@ -10,12 +10,12 @@ import { JwtService } from '@nestjs/jwt';
 import { IUser } from 'src/users/users.interface';
 import { RegisterUserDto } from 'src/users/dto/create-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { SoftDeleteModel } from 'soft-delete-plugin-mongoose';
 import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { retry, throwError } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
 import ms from 'ms';
 import { Role } from 'src/constants/enums/role.enum';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +23,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     @InjectModel(User.name)
-    private UserModel: SoftDeleteModel<UserDocument>,
+    private UserModel: Model<UserDocument>,
     private configService: ConfigService,
   ) {}
 
@@ -44,7 +44,7 @@ export class AuthService {
     if (!user) {
       throw new Error('User không hợp lệ');
     }
-    const { _id, name, email, role } = user;
+    const { _id, name, email, role, age } = user;
     if (!_id || !name || !email || !role) {
       throw new Error('Thiếu thông tin người dùng cần thiết');
     }
@@ -56,6 +56,7 @@ export class AuthService {
       name,
       email,
       role,
+      age,
     };
 
     const refresh_token = this.createRefreshToken(payload);
@@ -63,12 +64,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        _id,
-        name,
-        email,
-      },
-      role,
+      refresh_token,
     };
   }
 

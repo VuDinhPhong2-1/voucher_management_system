@@ -16,13 +16,13 @@ import { ConfigService } from '@nestjs/config';
             pass: configService.get<string>('EMAIL_AUTH_PASS'),
           },
         },
-        template: {
-          dir: join(__dirname, 'templates'),
-          adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true,
-          },
-        },
+        // template: {
+        //   dir: join(__dirname, 'templates'),
+        //   adapter: new HandlebarsAdapter(),
+        //   options: {
+        //     strict: true,
+        //   },
+        // },
         //preview: true
       }),
       inject: [ConfigService],

@@ -1,4 +1,3 @@
-// vouchers.service.ts
 import {
   Injectable,
   ConflictException,
@@ -6,22 +5,25 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Voucher, VoucherDocument } from './schemas/voucher.schema';
-import { MailerService } from '@nestjs-modules/mailer';
 import { RequestVoucherDto } from './dto/request-voucher.dto';
 import { EventDocument } from 'src/event/schemas/event.schema';
 import { Model } from 'mongoose';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class VouchersService {
   constructor(
     @InjectModel(Voucher.name)
     private voucherModel: Model<VoucherDocument>,
-    private readonly mailerService: MailerService,
     @InjectModel(Event.name)
     private eventModel: Model<EventDocument>,
+    @InjectQueue('email') private emailQueue: Queue,
   ) {}
 
-  async requestVoucher(requestVoucherDto: RequestVoucherDto): Promise<Voucher> {
+  async requestVoucher(
+    requestVoucherDto: RequestVoucherDto,
+  ): Promise<{ message: string }> {
     const session = await this.eventModel.db.startSession();
     session.startTransaction();
 
@@ -31,11 +33,9 @@ export class VouchersService {
         .session(session)
         .exec();
 
-      if (!event) 
-        throw new Error('Event not found');
+      if (!event) throw new Error('Event not found');
 
-
-      if (event.issuedVouchers <= 0) 
+      if (event.issuedVouchers <= 0)
         throw new ConflictException('No vouchers available');
 
       event.issuedVouchers -= 1;
@@ -50,9 +50,27 @@ export class VouchersService {
 
       await session.commitTransaction();
       session.endSession();
-      await this.sendVoucherEmail(requestVoucherDto.userEmail, voucher.code);
 
-      return voucher;
+      console.log('Voucher created at:', new Date().toISOString());
+
+      // Đưa email vào hàng đợi với cấu hình thời gian
+      await this.emailQueue.add(
+        'sendEmail',
+        {
+          email: requestVoucherDto.userEmail,
+          voucherCode: voucher.code,
+        },
+        {
+          delay: 5000, // Thời gian trễ 5 giây trước khi thực hiện công việc
+          attempts: 3, // Số lần thử lại tối đa
+          backoff: 1000, // Thời gian chờ giữa các lần thử lại
+          timeout: 10000, // Thời gian chờ tối đa cho công việc là 10 giây
+        },
+      );
+
+      return {
+        message: 'Voucher request received and email will be sent shortly.',
+      };
     } catch (error) {
       await session.abortTransaction();
       session.endSession();
@@ -63,41 +81,4 @@ export class VouchersService {
   private generateVoucherCode(): string {
     return Math.random().toString(36).substring(2, 15).toUpperCase();
   }
-
-  private async sendVoucherEmail(
-    email: string,
-    voucherCode: string,
-  ): Promise<void> {
-    try {
-      await this.mailerService.sendMail({
-        to: email,
-        from: 'vudinhphong@gmail.com',
-        subject: 'Your Voucher Code',
-        html: `
-          <html>
-            <head>
-              <meta charset='UTF-8' />
-              <title>Voucher</title>
-            </head>
-            <body>
-              <h1>Chúc mừng!</h1>
-              <p>Chúng tôi rất vui khi thông báo rằng bạn đã nhận được một voucher.</p>
-              <p><strong>Chi tiết Voucher:</strong></p>
-              <ul>
-                <li><strong>Mã Voucher:</strong> ${voucherCode}</li>
-              </ul>
-              <p>Xin cảm ơn bạn đã tham gia!</p>
-              <footer>
-                <p>Đội ngũ hỗ trợ khách hàng</p>
-              </footer>
-            </body>
-          </html>
-        `,
-      });
-    } catch (error) {
-      console.error('Error sending email:', error);
-      throw new InternalServerErrorException('Failed to send voucher email');
-    }
-  }
-  
 }

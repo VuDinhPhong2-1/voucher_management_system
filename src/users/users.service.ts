@@ -103,6 +103,7 @@ export class UsersService {
       return user;
     } catch (error) {
       console.log(error);
+      throw new Error(`Failed to find user: ${error.message}`);
     }
   }
   async isValidPassword(password, hash) {
@@ -124,18 +125,6 @@ export class UsersService {
       );
     }
   }
-
-  // async remove(id: string, user: IUser) {
-  //   this.userModel.softDelete({ _id: id });
-  //   const result = await this.userModel.findByIdAndUpdate({
-  //     _id: id,
-  //     deletedBy: {
-  //       _id: user._id,
-  //       email: user.email,
-  //     },
-  //   });
-  //   return result;
-  // }
 
   async updateUserToken(refresh_token: string, _id: string) {
     return this.userModel.updateOne(

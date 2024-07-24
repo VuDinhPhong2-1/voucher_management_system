@@ -12,6 +12,7 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @ApiBody({ type: UserLoginDto })
+  @ResponseMessage('Login')
   @Post('/login')
   handleLogin(@User() user) {
     return this.authService.login(user._doc);
@@ -23,7 +24,7 @@ export class AuthController {
   }
 
   @Post('/register')
-  @ResponseMessage('Register a new user')
+  // @ResponseMessage('Register a new user')
   @ApiBody({ type: RegisterUserDto })
   registerUser(@Body() registerUserDto: RegisterUserDto) {
     return this.authService.RegisterUser(registerUserDto);

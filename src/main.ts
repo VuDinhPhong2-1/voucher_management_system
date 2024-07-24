@@ -1,9 +1,17 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { TransformInterceptor } from './core/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // config Reflector
+  const reflector = app.get(Reflector);
+
+  // config interceptors 
+  app.useGlobalInterceptors(new TransformInterceptor(reflector));
+
   // setup config CORS
   app.enableCors({
     origin: true,

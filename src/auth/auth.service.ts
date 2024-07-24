@@ -2,10 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
-import { error } from 'console';
 import { JwtService } from '@nestjs/jwt';
 import { IUser } from 'src/users/users.interface';
 import { RegisterUserDto } from 'src/users/dto/create-user.dto';
@@ -45,9 +43,8 @@ export class AuthService {
       throw new Error('User không hợp lệ');
     }
     const { _id, name, email, role, age } = user;
-    if (!_id || !name || !email || !role) {
+    if (!_id || !name || !email || !role)
       throw new Error('Thiếu thông tin người dùng cần thiết');
-    }
 
     const payload = {
       sub: _id.toString(),
@@ -72,9 +69,8 @@ export class AuthService {
     const emailExists = await this.UserModel.findOne({
       email: registerUserDto.email,
     });
-    if (emailExists) {
-      throw new ConflictException('Email đã tồn tại!!!');
-    }
+    if (emailExists) throw new ConflictException('Email đã tồn tại!!!');
+
     const roleUser = Role.User;
     const pass = await this.usersService.hashPassword(registerUserDto.password);
     const result = await this.UserModel.create({

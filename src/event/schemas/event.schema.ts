@@ -5,7 +5,6 @@ export type EventDocument = Event & Document;
 
 @Schema({ timestamps: true })
 export class Event {
-
   @Prop({ required: true })
   name: string;
 
@@ -14,6 +13,12 @@ export class Event {
 
   @Prop({ required: true })
   issuedVouchers: number;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null })
+  editingBy: mongoose.Schema.Types.ObjectId;
+
+  @Prop({ default: null })
+  lastEditedAt: Date;
 }
 
 export const EventSchema = SchemaFactory.createForClass(Event);

@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Event, EventDocument } from './schemas/event.schema';
 import { CreateEventDto } from './dto/create-event.dto';
 import mongoose, { Model, Schema } from 'mongoose';
-
+import { Types } from 'mongoose';
 @Injectable()
 export class EventsService {
   constructor(
@@ -18,18 +18,15 @@ export class EventsService {
 
   async create(createEventDto: CreateEventDto): Promise<Event> {
     try {
-      const createdEvent = new this.eventModel(createEventDto);
-      return createdEvent.save();
+      const createdEvent = await this.eventModel.create(createEventDto);
+      return createdEvent;
     } catch (error) {
       console.error('Error creating event:', error);
       throw new InternalServerErrorException('Failed to create event');
     }
   }
 
-  async markEditable(
-    eventId: string,
-    userId: Schema.Types.ObjectId,
-  ): Promise<void> {
+  async markEditable(eventId: string, userId: Types.ObjectId): Promise<void> {
     const session = await this.eventModel.db.startSession();
     session.startTransaction();
 
@@ -40,12 +37,13 @@ export class EventsService {
         .exec();
       if (!event) throw new NotFoundException('Event not found');
 
-      if (event.editingBy)
+      if (event.editingBy && !event.editingBy.equals(userId))
         throw new ConflictException(
           'Event is already being edited by another user',
         );
 
       event.editingBy = userId;
+      event.lastEditedAt = new Date();
       await event.save({ session });
 
       await session.commitTransaction();

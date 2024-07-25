@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Document, Types } from 'mongoose';
 
 export type EventDocument = Event & Document;
 
@@ -15,7 +15,7 @@ export class Event {
   issuedVouchers: number;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null })
-  editingBy: mongoose.Schema.Types.ObjectId;
+  editingBy: Types.ObjectId;
 
   @Prop({ default: null })
   lastEditedAt: Date;

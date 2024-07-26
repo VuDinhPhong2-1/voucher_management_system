@@ -12,14 +12,12 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { AdminGuard } from 'src/guards/admin.guard';
-import { MarkEditableDto } from './dto/mark-editable.dto';
 import { ResponseMessage } from 'src/decorators/customize';
-import { IUser } from 'src/users/users.interface';
 import { IGetUserAuthInfoRequest } from 'src/type/user-auth-request.interface';
 
 @ApiTags('events')
 @Controller('events')
-export class EventController {
+export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()

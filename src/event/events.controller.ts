@@ -10,10 +10,10 @@ import {
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { AdminGuard } from 'src/guards/admin.guard';
-import { ResponseMessage } from 'src/decorators/customize';
-import { IGetUserAuthInfoRequest } from 'src/type/user-auth-request.interface';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { AdminGuard } from '../guards/admin.guard';
+import { ResponseMessage } from '../decorators/customize';
+import { IGetUserAuthInfoRequest } from '../type/user-auth-request.interface';
 
 @ApiTags('events')
 @Controller('events')

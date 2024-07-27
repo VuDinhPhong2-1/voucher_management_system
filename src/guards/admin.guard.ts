@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { ROLES_KEY } from 'src/decorators/customize';
-import { IUser } from 'src/users/users.interface';
+import { ROLES_KEY } from '../decorators/customize';
+import { IUser } from '../users/users.interface';
 
 @Injectable()
 export class AdminGuard implements CanActivate {

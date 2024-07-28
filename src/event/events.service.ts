@@ -7,8 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Event, EventDocument } from './schemas/event.schema';
 import { CreateEventDto } from './dto/create-event.dto';
-import mongoose, { Model, Schema } from 'mongoose';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 @Injectable()
 export class EventsService {
   constructor(
@@ -23,6 +22,18 @@ export class EventsService {
     } catch (error) {
       console.error('Error creating event:', error);
       throw new InternalServerErrorException('Failed to create event');
+    }
+  }
+
+  async findOneById(eventId: string): Promise<Event | null> {
+    try {
+      const user = await this.eventModel.findOne({ _id: eventId }).exec();
+      if (!user)
+        throw new NotFoundException(`User with email ${eventId} not found`);
+      return user;
+    } catch (error) {
+      console.error(`Failed to find user: ${error.message}`);
+      throw new Error(`Failed to find user: ${error.message}`);
     }
   }
 

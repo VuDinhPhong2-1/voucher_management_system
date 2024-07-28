@@ -1,10 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   Param,
   Post,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
@@ -23,11 +23,18 @@ export class EventsController {
   @Post()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, AdminGuard)
+  @ResponseMessage('Create new event')
   create(@Body() createEventDto: CreateEventDto) {
     return this.eventsService.create(createEventDto);
   }
 
-  @ApiBearerAuth('JWT-auth')
+  @Get(':eventId')
+  @ResponseMessage('find event')
+  async findOneById(@Param('eventId') eventId: string) {
+    return this.eventsService.findOneById(eventId);
+  }
+
+  @ApiBearerAuth('JWT-auth') 
   @UseGuards(JwtAuthGuard)
   @Post(':eventId/editable/me')
   @ResponseMessage('Edit able event')

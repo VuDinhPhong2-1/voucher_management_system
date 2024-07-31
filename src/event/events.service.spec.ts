@@ -7,6 +7,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 
 describe('EventsService', () => {
@@ -168,8 +169,23 @@ describe('EventsService', () => {
     });
   });
   describe('releaseEditable', () => {
+    it('should throw BadRequestException for invalid IDs', async () => {
+      const invalidEventId = 'invalidEventId';
+      const userId = new Types.ObjectId().toString();
+
+      // Call the service method with invalid IDs
+      await expect(
+        eventsService.releaseEditable(invalidEventId, userId),
+      ).rejects.toThrow(BadRequestException);
+
+      // Ensure no session operations are performed
+      expect(mockSession.startTransaction).toHaveBeenCalled();
+      expect(mockSession.abortTransaction).toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
+    });
+
     it('should successfully release an editable event', async () => {
-      const eventId = 'someEventId';
+      const eventId = new Types.ObjectId().toString();
       const userId = new Types.ObjectId().toString();
 
       const mockEvent = {
@@ -194,8 +210,26 @@ describe('EventsService', () => {
       expect(mockSession.endSession).toHaveBeenCalled();
     });
 
+    it('should throw NotFoundException if event is not found', async () => {
+      const eventId = new Types.ObjectId().toString();
+      const userId = new Types.ObjectId().toString();
+
+      mockEventModel.db.startSession.mockResolvedValue(mockSession);
+      mockEventModel.findById.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        eventsService.releaseEditable(eventId, userId),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockSession.abortTransaction).toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
+    });
+
     it('should throw ConflictException if user is not authorized to release edit', async () => {
-      const eventId = 'someEventId';
+      const eventId = new Types.ObjectId().toString();
       const userId = new Types.ObjectId().toString();
       const otherUserId = new Types.ObjectId().toString();
 
@@ -218,8 +252,9 @@ describe('EventsService', () => {
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
     });
+
     it('should handle and rethrow unexpected errors', async () => {
-      const eventId = 'someEventId';
+      const eventId = new Types.ObjectId().toString();
       const userId = new Types.ObjectId().toString();
 
       mockEventModel.db.startSession.mockResolvedValue(mockSession);
@@ -236,6 +271,7 @@ describe('EventsService', () => {
       expect(mockSession.endSession).toHaveBeenCalled();
     });
   });
+
   describe('maintainEditable', () => {
     it('should update lastEditedAt if the event is being edited by the current user', async () => {
       const eventId = 'someEventId';

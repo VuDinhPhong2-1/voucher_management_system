@@ -9,7 +9,7 @@ async function bootstrap() {
   // config Reflector
   const reflector = app.get(Reflector);
 
-  // config interceptors 
+  // config interceptors
   app.useGlobalInterceptors(new TransformInterceptor(reflector));
 
   // setup config CORS
@@ -17,14 +17,13 @@ async function bootstrap() {
     origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: false,
-    credentials: true, // cho phép giữa clien và server trao đổi
+    credentials: true,
   });
-  // config Swagger document
+
   const config = new DocumentBuilder()
     .setTitle('API BACKEND NESTJS')
     .setDescription('The API description')
     .setVersion('1.0')
-    //.addTag('cats')
     .addBearerAuth(
       {
         type: 'http',
@@ -34,7 +33,7 @@ async function bootstrap() {
         description: 'Enter JWT token',
         in: 'header',
       },
-      'JWT-auth', // This name here is important for matching up with @ApiBearerAuth() in your controller!
+      'JWT-auth',
     )
     .build();
   const document = SwaggerModule.createDocument(app, config);
@@ -43,6 +42,6 @@ async function bootstrap() {
       persisAuthorization: true,
     },
   });
-  await app.listen(3000);
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap();

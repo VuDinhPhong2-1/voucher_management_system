@@ -6,7 +6,13 @@ import { InternalServerErrorException } from '@nestjs/common';
 @Processor('email')
 export class EmailProcessor {
   constructor(private readonly mailerService: MailerService) {}
-
+/**
+ * Processes the 'sendEmail' job from the 'email' queue.
+ * This function sends an email containing a voucher code to the specified recipient.
+ *
+ * @param job - The Bull job containing the email and voucher code data.
+ * @throws {InternalServerErrorException} - If the email fails to send.
+ */
   @Process('sendEmail')
   async handleSendEmail(job: Job) {
     const { email, voucherCode } = job.data;
@@ -41,7 +47,6 @@ export class EmailProcessor {
 
       console.log('Email sent at:', new Date().toISOString());
     } catch (error) {
-      console.error('Error sending email:', error);
       throw new InternalServerErrorException('Failed to send voucher email');
     }
   }

@@ -75,10 +75,7 @@ export class VouchersService {
       );
 
       try {
-        // Chờ email được gửi thành công
         await resultSendEmail.finished();
-
-        // Lưu voucher và commit giao dịch nếu email gửi thành công
         await voucher.save({ session });
         await session.commitTransaction();
         session.endSession();
@@ -86,7 +83,6 @@ export class VouchersService {
           message: 'Yêu cầu voucher đã được nhận và email sẽ được gửi sớm.',
         };
       } catch (emailError) {
-        console.error('Error sending email:', emailError);
         await session.abortTransaction();
         session.endSession();
         throw new InternalServerErrorException(
@@ -120,7 +116,6 @@ export class VouchersService {
     try {
       if (!isValidObjectId(voucherId))
         throw new BadRequestException(`This voucherId is invalid`);
-      console.log(isValidObjectId(voucherId));
       const voucher = await this.voucherModel
         .findOne({ _id: voucherId })
         .exec();
@@ -130,7 +125,6 @@ export class VouchersService {
         );
       return voucher;
     } catch (error) {
-      console.error(`Failed to find voucher: ${error.message}`);
       throw new Error(`Failed to find voucher: ${error.message}`);
     }
   }

@@ -86,7 +86,6 @@ export class UsersService {
         throw new NotFoundException(`User with email ${email} not found`);
       return user;
     } catch (error) {
-      console.error(`Failed to find user: ${error.message}`);
       throw new Error(`Failed to find user: ${error.message}`);
     }
   }
@@ -102,7 +101,6 @@ export class UsersService {
       if (!user) return 'Không tìm thấy người dùng!';
       return user;
     } catch (error) {
-      console.log(error);
       throw new Error(`Failed to find user: ${error.message}`);
     }
   }
@@ -119,7 +117,6 @@ export class UsersService {
       if (!userUpdate) return 'Lỗi không thể cập nhật!';
       return userUpdate;
     } catch (error) {
-      console.log(error);
       throw new InternalServerErrorException(
         'Có lỗi xảy ra trong quá trình xử lý yêu cầu.',
       );

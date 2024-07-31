@@ -102,20 +102,20 @@ describe('VouchersService', () => {
       expect(mockEvent.save).toHaveBeenCalledWith({ session: mockSession });
       expect(mockSession.commitTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
-      const expectedEmailQueueData = {
-        name: 'sendEmail',
-        data: {
-          email: 'vudinhphong.261001@gmail.com',
-          voucherCode: 'ABC123',
-        },
-        opts: {
-          delay: 5000,
-          attempts: 3,
-          backoff: 1000,
-          timeout: 10000,
-        },
-      };
-      await emailQueue.add(expectedEmailQueueData);
+      // const expectedEmailQueueData = {
+      //   name: 'sendEmail',
+      //   data: {
+      //     email: 'vudinhphong.261001@gmail.com',
+      //     voucherCode: 'ABC123',
+      //   },
+      //   opts: {
+      //     delay: 5000,
+      //     attempts: 3,
+      //     backoff: 1000,
+      //     timeout: 10000,
+      //   },
+      // };
+    //  / await emailQueue.add(expectedEmailQueueData);
     }, 60000);
 
     it('should throw NotFoundException if event is not found', async () => {

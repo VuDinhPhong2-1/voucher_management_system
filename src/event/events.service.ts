@@ -47,7 +47,6 @@ export class EventsService {
         throw new NotFoundException(`event with eventId ${eventId} not found`);
       return event;
     } catch (error) {
-      console.error(`Failed to find event: ${error.message}`);
       throw new Error(`Failed to find event: ${error.message}`);
     }
   }

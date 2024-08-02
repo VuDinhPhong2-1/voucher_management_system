@@ -5,6 +5,9 @@ export type EventDocument = Event & Document;
 
 @Schema({ timestamps: true })
 export class Event {
+  @Prop({ type: mongoose.Schema.Types.ObjectId, auto: true })
+  _id: Types.ObjectId;
+
   @Prop({ required: true })
   name: string;
 

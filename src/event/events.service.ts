@@ -115,6 +115,7 @@ export class EventsService {
         );
 
       event.editingBy = null;
+      event.lastEditedAt = null;
       await event.save({ session });
 
       await session.commitTransaction();
@@ -168,6 +169,41 @@ export class EventsService {
         event.lastEditedAt = new Date();
         await event.save({ session });
       }
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+  async findExpiredEdits(fiveMinutesAgo: Date): Promise<Event[]> {
+    try {
+      const events = await this.eventModel
+        .find({
+          editingBy: { $exists: true, $ne: null },
+          lastEditedAt: { $exists: true, $ne: null, $lt: fiveMinutesAgo },
+        })
+        .exec();
+      return events;
+    } catch (error) {
+      throw new Error(`Failed to find expired edits: ${error.message}`);
+    }
+  }
+  async clearEditingLastEditedAtFields(eventId: string): Promise<void> {
+    const session = await this.eventModel.db.startSession();
+    session.startTransaction();
+
+    try {
+      if (!isValidObjectId(eventId))
+        throw new BadRequestException(`This eventId is invalid`);
+
+      await this.eventModel.updateOne(
+        { _id: eventId },
+        { $set: { editingBy: null, lastEditedAt: null } },
+        { session },
+      );
 
       await session.commitTransaction();
     } catch (error) {

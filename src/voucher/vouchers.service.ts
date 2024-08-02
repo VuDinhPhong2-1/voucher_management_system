@@ -80,7 +80,8 @@ export class VouchersService {
         await session.commitTransaction();
         session.endSession();
         return {
-          message: 'Yêu cầu voucher đã được nhận và email sẽ được gửi sớm.',
+          message:
+            'Voucher request has been received and email will be sent soon.',
         };
       } catch (emailError) {
         await session.abortTransaction();

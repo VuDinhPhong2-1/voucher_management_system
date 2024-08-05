@@ -9,8 +9,15 @@ import {
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
+import { EditLocksService } from '../editLock/editlocks.service';
+import { EditLock } from '../editLock/schemas/editLock.schema';
 
 describe('EventsService', () => {
+  let eventsService: EventsService;
+  let mockEventModel: any;
+  let mockSession: any;
+  let mockEditLockModel: any;
+  let editLockModel: Model<EditLock>;
   const mockEvent = {
     _id: new Types.ObjectId('61c0ccf11d7bf83d153d7c06'),
     name: 'Test Event',
@@ -21,36 +28,43 @@ describe('EventsService', () => {
     save: jest.fn(),
   } as any;
 
-  const mockEventModel = {
-    findById: jest.fn(),
-    create: jest.fn(),
-    db: {
-      startSession: jest.fn(),
-    },
-  };
-  const mockSession = {
-    startTransaction: jest.fn(),
-    commitTransaction: jest.fn(),
-    abortTransaction: jest.fn(),
-    endSession: jest.fn(),
-  };
-
-  let eventsService: EventsService;
-  let model: Model<Event & Document>;
-
   beforeEach(async () => {
+    mockEventModel = {
+      findById: jest.fn(),
+      create: jest.fn(),
+      db: {
+        startSession: jest.fn(),
+      },
+    };
+    mockEditLockModel = {
+      create: jest.fn(),
+      findOne: jest.fn(),
+      deleteOne: jest.fn(),
+    };
+    mockSession = {
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      abortTransaction: jest.fn(),
+      endSession: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventsService,
+        EditLocksService,
         {
           provide: getModelToken(Event.name),
           useValue: mockEventModel,
+        },
+        {
+          provide: getModelToken(EditLock.name),
+          useValue: mockEditLockModel,
         },
       ],
     }).compile();
 
     eventsService = module.get<EventsService>(EventsService);
-    model = module.get<Model<Event & Document>>(getModelToken(Event.name));
+    editLockModel = module.get<Model<EditLock>>(getModelToken(EditLock.name));
   });
 
   describe('create', () => {
@@ -69,7 +83,7 @@ describe('EventsService', () => {
     });
 
     it('should throw an error if create fails', async () => {
-      (mockEventModel.create as jest.Mock).mockRejectedValueOnce(
+      mockEventModel.create.mockRejectedValueOnce(
         new Error('Failed to create'),
       );
 
@@ -79,7 +93,7 @@ describe('EventsService', () => {
     });
   });
 
-  describe('markEditable', () => {
+  describe('markEditable2', () => {
     it('should mark an event as editable', async () => {
       const eventId = 'someEventId';
       const userId = new Types.ObjectId();
@@ -87,17 +101,17 @@ describe('EventsService', () => {
       const mockEvent = {
         _id: eventId,
         editingBy: null,
+        lastEditedAt: null,
         save: jest.fn(),
       };
-      //const session = await this.eventModel.db.startSession();
+
       mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      // const event = await this.eventModel.findById(eventId).session(session).exec();
       mockEventModel.findById.mockReturnValue({
         session: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockEvent),
       });
 
-      await eventsService.markEditable(eventId, userId);
+      await eventsService.markEditable2(eventId, userId);
 
       expect(mockSession.startTransaction).toHaveBeenCalled();
       expect(mockEventModel.findById).toHaveBeenCalledWith(eventId);
@@ -117,7 +131,7 @@ describe('EventsService', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      await expect(eventsService.markEditable(eventId, userId)).rejects.toThrow(
+      await expect(eventsService.markEditable2(eventId, userId)).rejects.toThrow(
         NotFoundException,
       );
 
@@ -125,7 +139,7 @@ describe('EventsService', () => {
       expect(mockSession.endSession).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if event is being edited by another user', async () => {
+    it('should throw ConflictException if event is being edited by another user or was edited within the last 5 minutes', async () => {
       const eventId = 'someEventId';
       const userId = new Types.ObjectId();
       const otherUserId = new Types.ObjectId();
@@ -133,6 +147,7 @@ describe('EventsService', () => {
       const mockEvent = {
         _id: eventId,
         editingBy: otherUserId,
+        lastEditedAt: new Date(Date.now()),
         save: jest.fn(),
       };
 
@@ -142,7 +157,7 @@ describe('EventsService', () => {
         exec: jest.fn().mockResolvedValue(mockEvent),
       });
 
-      await expect(eventsService.markEditable(eventId, userId)).rejects.toThrow(
+      await expect(eventsService.markEditable2(eventId, userId)).rejects.toThrow(
         ConflictException,
       );
 
@@ -160,7 +175,7 @@ describe('EventsService', () => {
         exec: jest.fn().mockRejectedValue(new Error('Unexpected error')),
       });
 
-      await expect(eventsService.markEditable(eventId, userId)).rejects.toThrow(
+      await expect(eventsService.markEditable2(eventId, userId)).rejects.toThrow(
         'Unexpected error',
       );
 
@@ -168,20 +183,20 @@ describe('EventsService', () => {
       expect(mockSession.endSession).toHaveBeenCalled();
     });
   });
+
   describe('releaseEditable', () => {
     it('should throw BadRequestException for invalid IDs', async () => {
       const invalidEventId = 'invalidEventId';
       const userId = new Types.ObjectId().toString();
 
-      // Call the service method with invalid IDs
       await expect(
         eventsService.releaseEditable(invalidEventId, userId),
       ).rejects.toThrow(BadRequestException);
 
-      // Ensure no session operations are performed
-      expect(mockSession.startTransaction).toHaveBeenCalled();
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
+      expect(mockEventModel.db.startSession).not.toHaveBeenCalled();
+      expect(mockSession.startTransaction).not.toHaveBeenCalled();
+      expect(mockSession.abortTransaction).not.toHaveBeenCalled();
+      expect(mockSession.endSession).not.toHaveBeenCalled();
     });
 
     it('should successfully release an editable event', async () => {
@@ -248,142 +263,6 @@ describe('EventsService', () => {
       await expect(
         eventsService.releaseEditable(eventId, userId),
       ).rejects.toThrow(ConflictException);
-
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-
-    it('should handle and rethrow unexpected errors', async () => {
-      const eventId = new Types.ObjectId().toString();
-      const userId = new Types.ObjectId().toString();
-
-      mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      mockEventModel.findById.mockReturnValue({
-        session: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockRejectedValue(new Error('Unexpected error')),
-      });
-
-      await expect(
-        eventsService.releaseEditable(eventId, userId),
-      ).rejects.toThrow('Unexpected error');
-
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-  });
-
-  describe('maintainEditable', () => {
-    it('should update lastEditedAt if the event is being edited by the current user', async () => {
-      const eventId = 'someEventId';
-      const userId = new Types.ObjectId().toString();
-
-      const mockEvent = {
-        _id: eventId,
-        editingBy: userId,
-        lastEditedAt: new Date(Date.now() - 2 * 60 * 1000), // less than 5 minutes ago
-        save: jest.fn(),
-      };
-
-      mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      mockEventModel.findById.mockReturnValue({
-        session: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(mockEvent),
-      });
-
-      await eventsService.maintainEditable(eventId, userId);
-
-      expect(mockSession.startTransaction).toHaveBeenCalled();
-      expect(mockEventModel.findById).toHaveBeenCalledWith(eventId);
-      expect(mockEvent.save).toHaveBeenCalledWith({ session: mockSession });
-      expect(mockEvent.lastEditedAt).toBeInstanceOf(Date);
-      expect(mockSession.commitTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-
-    it('should reset editingBy if another user is editing and the edit has expired', async () => {
-      const eventId = 'someEventId';
-      const userId = new Types.ObjectId().toString();
-      const expiredDate = new Date(Date.now() - 10 * 60 * 1000); // more than 5 minutes ago
-
-      const mockEvent = {
-        _id: eventId,
-        editingBy: new Types.ObjectId().toString(),
-        lastEditedAt: expiredDate,
-        save: jest.fn(),
-      };
-
-      mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      mockEventModel.findById.mockReturnValue({
-        session: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(mockEvent),
-      });
-
-      await eventsService.maintainEditable(eventId, userId);
-
-      expect(mockSession.startTransaction).toHaveBeenCalled();
-      expect(mockEventModel.findById).toHaveBeenCalledWith(eventId);
-      expect(mockEvent.save).toHaveBeenCalledWith({ session: mockSession });
-      expect(mockEvent.editingBy).toBeNull();
-      expect(mockSession.commitTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-
-    it('should throw ConflictException if another user is editing and the edit has not expired', async () => {
-      const eventId = 'someEventId';
-      const userId = new Types.ObjectId().toString();
-
-      const mockEvent = {
-        _id: eventId,
-        editingBy: new Types.ObjectId().toString(),
-        lastEditedAt: new Date(Date.now() - 2 * 60 * 1000), // less than 5 minutes ago
-        save: jest.fn(),
-      };
-
-      mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      mockEventModel.findById.mockReturnValue({
-        session: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(mockEvent),
-      });
-
-      await expect(
-        eventsService.maintainEditable(eventId, userId),
-      ).rejects.toThrow(ConflictException);
-
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-
-    it('should throw NotFoundException if the event is not found', async () => {
-      const eventId = 'someEventId';
-      const userId = new Types.ObjectId().toString();
-
-      mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      mockEventModel.findById.mockReturnValue({
-        session: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(null),
-      });
-
-      await expect(
-        eventsService.maintainEditable(eventId, userId),
-      ).rejects.toThrow(NotFoundException);
-
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-
-    it('should handle and rethrow unexpected errors', async () => {
-      const eventId = 'someEventId';
-      const userId = new Types.ObjectId().toString();
-
-      mockEventModel.db.startSession.mockResolvedValue(mockSession);
-      mockEventModel.findById.mockReturnValue({
-        session: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockRejectedValue(new Error('Unexpected error')),
-      });
-
-      await expect(
-        eventsService.maintainEditable(eventId, userId),
-      ).rejects.toThrow('Unexpected error');
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();

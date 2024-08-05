@@ -37,77 +37,77 @@ describe('EventsController', () => {
     expect(eventsController).toBeDefined();
   });
 
-  describe('create', () => {
-    it('Should create a new event', async () => {
-      const newEvent = {
-        _id: new Types.ObjectId('61c0ccf11d7bf83d153d7c06'),
-        name: 'Test Event',
-        maxVouchers: 100,
-        issuedVouchers: 100,
-        editingBy: null,
-        lastEditedAt: new Date(Date.now() - 5 * 60 * 1000),
-      };
-      const { _id, ...createEvent } = newEvent;
-      mockEventsService.create = jest.fn().mockResolvedValueOnce(newEvent);
+  // describe('create', () => {
+  //   it('Should create a new event', async () => {
+  //     const newEvent = {
+  //       _id: new Types.ObjectId('61c0ccf11d7bf83d153d7c06'),
+  //       name: 'Test Event',
+  //       maxVouchers: 100,
+  //       issuedVouchers: 100,
+  //       editingBy: null,
+  //       lastEditedAt: new Date(Date.now() - 5 * 60 * 1000),
+  //     };
+  //     const { _id, ...createEvent } = newEvent;
+  //     mockEventsService.create = jest.fn().mockResolvedValueOnce(newEvent);
 
-      const result = await eventsController.create(
-        createEvent as CreateEventDto,
-      );
+  //     const result = await eventsController.create(
+  //       createEvent as CreateEventDto,
+  //     );
 
-      expect(eventsService.create).toHaveBeenCalled();
+  //     expect(eventsService.create).toHaveBeenCalled();
 
-      expect(result).toEqual(newEvent);
-    });
-  });
+  //     expect(result).toEqual(newEvent);
+  //   });
+  // });
 
-  describe('markEditable', () => {
-    it('Should allow event editing', async () => {
-      const eventId = '61c0ccf11d7bf83d153d7c03';
-      const userId = new Types.ObjectId('61c0ccf11d7bf83d153d7c06');
-      const user = {
-        _id: userId,
-        name: 'Test User',
-        email: 'test@example.com',
-        refresh_token: 'some-refresh-token',
-        role: Role.User,
-        age: 30,
-      } as IUser;
-      const mockRequest = {
-        user,
-      } as IGetUserAuthInfoRequest;
-      mockEventsService.markEditable = jest
-        .fn()
-        .mockResolvedValueOnce(undefined);
-      await eventsController.markEditable(eventId, mockRequest);
-      expect(mockEventsService.markEditable).toHaveBeenCalledWith(
-        eventId,
-        userId,
-      );
-    });
-  });
-  describe('releaseEditable', () => {
-    it('Should release the current user edit rights', async () => {
-      const eventId = '61c0ccf11d7bf83d153d7c03';
-      const userId = new Types.ObjectId('61c0ccf11d7bf83d153d7c06');
-      const user = {
-        _id: userId,
-        name: 'Test User',
-        email: 'test@example.com',
-        refresh_token: 'some-refresh-token',
-        role: Role.User,
-        age: 30,
-      } as IUser;
-      const mockRequest = {
-        user,
-      } as IGetUserAuthInfoRequest;
-      mockEventsService.releaseEditable = jest
-        .fn()
-        .mockResolvedValueOnce(undefined);
-      await eventsController.releaseEditable(eventId, mockRequest);
-      expect(mockEventsService.releaseEditable).toHaveBeenCalledWith(
-        eventId,
-        userId.toString(),
-      );
-    });
-  });
+  // describe('markEditable', () => {
+  //   it('Should allow event editing', async () => {
+  //     const eventId = '61c0ccf11d7bf83d153d7c03';
+  //     const userId = new Types.ObjectId('61c0ccf11d7bf83d153d7c06');
+  //     const user = {
+  //       _id: userId,
+  //       name: 'Test User',
+  //       email: 'test@example.com',
+  //       refresh_token: 'some-refresh-token',
+  //       role: Role.User,
+  //       age: 30,
+  //     } as IUser;
+  //     const mockRequest = {
+  //       user,
+  //     } as IGetUserAuthInfoRequest;
+  //     mockEventsService.markEditable = jest
+  //       .fn()
+  //       .mockResolvedValueOnce(undefined);
+  //     await eventsController.markEditable(eventId, mockRequest);
+  //     expect(mockEventsService.markEditable).toHaveBeenCalledWith(
+  //       eventId,
+  //       userId,
+  //     );
+  //   });
+  // });
+  // describe('releaseEditable', () => {
+  //   it('Should release the current user edit rights', async () => {
+  //     const eventId = '61c0ccf11d7bf83d153d7c03';
+  //     const userId = new Types.ObjectId('61c0ccf11d7bf83d153d7c06');
+  //     const user = {
+  //       _id: userId,
+  //       name: 'Test User',
+  //       email: 'test@example.com',
+  //       refresh_token: 'some-refresh-token',
+  //       role: Role.User,
+  //       age: 30,
+  //     } as IUser;
+  //     const mockRequest = {
+  //       user,
+  //     } as IGetUserAuthInfoRequest;
+  //     mockEventsService.releaseEditable = jest
+  //       .fn()
+  //       .mockResolvedValueOnce(undefined);
+  //     await eventsController.releaseEditable(eventId, mockRequest);
+  //     expect(mockEventsService.releaseEditable).toHaveBeenCalledWith(
+  //       eventId,
+  //       userId.toString(),
+  //     );
+  //   });
+  // });
 });

@@ -1,15 +1,18 @@
-import { EventsService } from './events.service';
-import { EventsController } from './events.controller';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Event, EventSchema } from './schemas/event.schema';
+import { EventsController } from './events.controller';
+import { EventsService } from './events.service';
+import { EditLocksModule } from 'src/editLock/editlocks.module';
+import { EditLocksService } from 'src/editLock/editlocks.service';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Event.name, schema: EventSchema }]),
+    EditLocksModule,
   ],
   controllers: [EventsController],
-  providers: [EventsService],
+  providers: [EditLocksModule, EventsService],
   exports: [
     EventsService,
     MongooseModule.forFeature([{ name: Event.name, schema: EventSchema }]),

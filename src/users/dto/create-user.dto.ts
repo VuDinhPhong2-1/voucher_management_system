@@ -50,12 +50,12 @@ export class RegisterUserDto {
 export class UserLoginDto {
   @IsString()
   @IsNotEmpty()
-  @ApiProperty({ example: 'ajanuw', description: 'user name login' })
+  @ApiProperty({ example: '123@gmail.com', description: 'user name login' })
   readonly email: string;
   @IsString()
   @IsNotEmpty()
   @ApiProperty({
-    example: '123456',
+    example: '123',
     description: 'Password login',
   })
   readonly password: string;

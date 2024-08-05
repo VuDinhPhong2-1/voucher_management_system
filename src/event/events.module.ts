@@ -4,7 +4,6 @@ import { Event, EventSchema } from './schemas/event.schema';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { EditLocksModule } from 'src/editLock/editlocks.module';
-import { EditLocksService } from 'src/editLock/editlocks.service';
 
 @Module({
   imports: [

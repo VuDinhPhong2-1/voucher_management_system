@@ -8,21 +8,17 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Event, EventDocument } from './schemas/event.schema';
 import { CreateEventDto } from './dto/create-event.dto';
-import { Model, Types } from 'mongoose';
+import { Model, MongooseError, Types } from 'mongoose';
 import { isValidObjectId } from '../utils/utils';
+import { EditLocksService } from '../editLock/editlocks.service';
 @Injectable()
 export class EventsService {
   constructor(
     @InjectModel(Event.name)
     private eventModel: Model<EventDocument>,
+    private readonly editLocksService: EditLocksService,
   ) {}
 
-  /**
-   * Creates a new event using the provided `CreateEventDto`.
-   * @param createEventDto - The data transfer object containing the details of the new event to be created.
-   * @returns A Promise that resolves with the newly created event.
-   * @throws InternalServerErrorException if there is an error while creating the event.
-   */
   async create(createEventDto: CreateEventDto): Promise<Event> {
     try {
       const createdEvent = await this.eventModel.create(createEventDto);
@@ -31,13 +27,7 @@ export class EventsService {
       throw new InternalServerErrorException('Failed to create event');
     }
   }
-  /**
-   * Finds an event by its unique identifier.
-   * @param eventId - The unique identifier of the event to be found.
-   * @returns A Promise that resolves with the found event or null if not found.
-   * @throws BadRequestException if the provided eventId is invalid.
-   * @throws NotFoundException if the event with the given eventId is not found.
-   */
+
   async findOneById(eventId: string): Promise<Event | null> {
     try {
       if (!isValidObjectId(eventId))
@@ -50,70 +40,104 @@ export class EventsService {
       throw new Error(`Failed to find event: ${error.message}`);
     }
   }
-  /**
-   * Marks the specified event as editable by the provided user.
-   * @param eventId - The unique identifier of the event to be edited.
-   * @param userId - The unique identifier of the user who wants to edit the event.
-   * @returns A Promise that resolves when the event is successfully marked as editable.
-   * @throws NotFoundException if the event with the given eventId is not found.
-   * @throws ConflictException if the event is already being edited by another user.
-   */
-  async markEditable(eventId: string, userId: Types.ObjectId): Promise<void> {
-    const session = await this.eventModel.db.startSession();
-    session.startTransaction();
 
+  async markEditable(eventId: string, userId: Types.ObjectId) {
     try {
-      const event = await this.eventModel
-        .findById(eventId)
-        .session(session)
-        .exec();
+      const event = await this.eventModel.findById(eventId).exec();
       if (!event) throw new NotFoundException('Event not found');
-
-      if (event.editingBy && !event.editingBy.equals(userId))
-        throw new ConflictException(
-          'Event is already being edited by another user',
+      if (event.lastEditedAt) {
+        const expiredEdit = new Date(
+          event.lastEditedAt.getTime() + 5 * 60 * 1000,
         );
+        const now = new Date();
+        if (now < expiredEdit) {
+          if (event.editingBy && !event.editingBy.equals(userId)) {
+            throw new ConflictException(
+              'Event is already being edited by another user or was edited within the last 5 minutes',
+              `tryEditingBy ${userId.toString()}`,
+            );
+          }
+        }
+      }
+      // -> is correct has expired editing or has a role editing
 
+      let editLock = await this.editLocksService.findEditLockByUserId(eventId);
+      if (editLock)
+        await this.editLocksService.destroyEditLock(userId.toString());
+
+      const createdLock = await this.editLocksService.createEditLock(
+        userId.toString(),
+        eventId,
+      );
+      if (!createdLock)
+        throw new ConflictException(
+          `Could not create new edit lock by ${userId.toString()}`,
+        );
       event.editingBy = userId;
       event.lastEditedAt = new Date();
-      await event.save({ session });
-
-      await session.commitTransaction();
+      const saveEvent = await event.save();
+      return saveEvent;
     } catch (error) {
-      await session.abortTransaction();
       throw error;
-    } finally {
-      session.endSession();
     }
   }
 
-  /**
-   * Releases the specified event from being edited by the provided user.
-   * @param eventId - The unique identifier of the event to be released from editing.
-   * @param userId - The unique identifier of the user who wants to release the event from editing.
-   * @returns A Promise that resolves when the event is successfully released from editing.
-   * @throws BadRequestException if the provided eventId or userId is invalid.
-   * @throws NotFoundException if the event with the given eventId is not found.
-   * @throws ConflictException if the user is not authorized to release the edit.
-   */
-  async releaseEditable(eventId: string, userId: string): Promise<void> {
+  async markEditable2(eventId: string, userId: Types.ObjectId) {
     const session = await this.eventModel.db.startSession();
     session.startTransaction();
-
     try {
-      if (!isValidObjectId(eventId) || !isValidObjectId(userId))
-        throw new BadRequestException(`This voucherId/userId is invalid`);
       const event = await this.eventModel
         .findById(eventId)
         .session(session)
         .exec();
       if (!event) throw new NotFoundException('Event not found');
+      if (event.lastEditedAt) {
+        const expiredEdit = new Date(
+          event.lastEditedAt.getTime() + 5 * 60 * 1000,
+        );
+        const now = new Date();
+        if (now < expiredEdit) {
+          if (event.editingBy && !event.editingBy.equals(userId)) {
+            throw new ConflictException(
+              'Event is already being edited by another user or was edited within the last 5 minutes',
+              `tryEditingBy ${userId.toString()}`,
+            );
+          }
+        }
+      }
+      event.editingBy = userId;
+      event.lastEditedAt = new Date();
+      const saveEvent = await event.save({ session });
+      await session.commitTransaction();
+      return saveEvent;
+    } catch (error) {
+      await session.abortTransaction();
+      if (error instanceof MongooseError) {
+        throw new Error(error.message);
+      }
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
 
-      if (!event.editingBy || event.editingBy.toString() !== userId)
+  async releaseEditable(eventId: string, userId: string): Promise<void> {
+    if (!isValidObjectId(eventId) || !isValidObjectId(userId)) {
+      throw new BadRequestException(`This voucherId/userId is invalid`);
+    }
+
+    const session = await this.eventModel.db.startSession();
+    try {
+      const event = await this.eventModel.findById(eventId).exec();
+      if (!event) throw new NotFoundException('Event not found');
+
+      if (!event.editingBy || event.editingBy.toString() !== userId) {
         throw new ConflictException(
           'You are not authorized to release this edit',
         );
+      }
 
+      session.startTransaction();
       event.editingBy = null;
       event.lastEditedAt = null;
       await event.save({ session });
@@ -126,19 +150,6 @@ export class EventsService {
       session.endSession();
     }
   }
-  /**
-   * Maintains the editing status of the specified event.
-   * This function checks if the user is currently editing the event and if the editing session has expired.
-   * If the user is editing the event and the editing session has not expired, it updates the last edited timestamp.
-   * If another user is currently editing the event, it throws a ConflictException.
-   * If the user is not editing the event and the editing session has expired, it releases the user from editing the event.
-   * @param eventId - The unique identifier of the event to be maintained.
-   * @param userId - The unique identifier of the user who wants to maintain the editing status of the event.
-   * @returns A Promise that resolves when the editing status of the event is successfully maintained.
-   * @throws BadRequestException if the provided eventId or userId is invalid.
-   * @throws NotFoundException if the event with the given eventId is not found.
-   * @throws ConflictException if the user is not authorized to maintain the edit.
-   */
   async maintainEditable(eventId: string, userId: string): Promise<void> {
     const session = await this.eventModel.db.startSession();
     session.startTransaction();

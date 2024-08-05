@@ -1,3 +1,5 @@
+import { EditLocksService } from './editLock/editlocks.service';
+import { EditLocksModule } from './editLock/editlocks.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -13,6 +15,7 @@ import { AppService } from './app.service';
 
 @Module({
   imports: [
+    EditLocksModule,
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -38,6 +41,6 @@ import { AppService } from './app.service';
     MailerCustomModule,
   ],
   controllers: [AppController, VouchersController],
-  providers: [AppService],
+  providers: [EditLocksModule, AppService],
 })
 export class AppModule {}

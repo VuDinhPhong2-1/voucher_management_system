@@ -34,14 +34,14 @@ export class EventsController {
     return this.eventsService.findOneById(eventId);
   }
 
-  @ApiBearerAuth('JWT-auth') 
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post(':eventId/editable/me')
   @ResponseMessage('Edit able event')
   async markEditable(
     @Param('eventId') eventId: string,
     @Req() request: IGetUserAuthInfoRequest,
-  ): Promise<void> {
+  ): Promise<void | any> {
     const userId = request.user._id;
     return this.eventsService.markEditable(eventId, userId);
   }
